@@ -8,8 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.tournamentapp.data.ApiClient
-import com.example.tournamentapp.data.AuthRequest
 import com.example.tournamentapp.data.AuthResponse
+import com.example.tournamentapp.data.LoginRequest
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -17,28 +17,37 @@ import retrofit2.Response
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: (String) -> Unit // Pass JWT token on success
 ) {
-    var username by remember { mutableStateOf("") }
+    // States for user input
+    var usernameOrEmail by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Main Layout
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center
     ) {
-        Text("Login", fontSize = 24.sp)
-        Spacer(modifier = Modifier.height(16.dp))
+        // Login Title
+        Text(
+            text = "Login",
+            fontSize = 24.sp,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
+        // Username or Email Field
         OutlinedTextField(
-            value = username,
-            onValueChange = { username = it },
-            label = { Text("Username") },
+            value = usernameOrEmail,
+            onValueChange = { usernameOrEmail = it },
+            label = { Text("Username or Email") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Password Field
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -47,18 +56,26 @@ fun LoginScreen(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Login Button
         Button(
             onClick = {
-                val request = AuthRequest(username, password)
+                // Construct the LoginRequest based on input
+                val request = if (usernameOrEmail.contains("@")) {
+                    LoginRequest(username = null, email = usernameOrEmail, password = password)
+                } else {
+                    LoginRequest(username = usernameOrEmail, email = null, password = password)
+                }
+
+                // Make API call
                 ApiClient.apiService.login(request).enqueue(object : Callback<AuthResponse> {
                     override fun onResponse(call: Call<AuthResponse>, response: Response<AuthResponse>) {
-                        if (response.isSuccessful) {
-                            val jwt = response.body()?.jwt
-                            Log.d("Login", "JWT Token: $jwt")
-                            onLoginSuccess()
+                        if (response.isSuccessful && response.body()?.success == true) {
+                            val token = response.body()?.data?.token
+                            Log.d("Login", "JWT Token: $token")
+                            onLoginSuccess(token ?: "")
                         } else {
-                            errorMessage = "Invalid username or password"
-                            Log.e("Login", "Error: ${response.errorBody()?.string()}")
+                            errorMessage = response.body()?.message ?: "Login failed. Please try again."
+                            Log.e("Login", "Error: ${response.body()?.message}")
                         }
                     }
 
@@ -73,11 +90,16 @@ fun LoginScreen(
             Text("Login")
         }
 
+        // Error Message
         if (errorMessage != null) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(errorMessage!!, color = MaterialTheme.colorScheme.error)
+            Text(
+                text = errorMessage!!,
+                color = MaterialTheme.colorScheme.error
+            )
         }
 
+        // Navigate to Register Button
         Spacer(modifier = Modifier.height(8.dp))
         TextButton(onClick = onNavigateToRegister) {
             Text("Don't have an account? Register")
