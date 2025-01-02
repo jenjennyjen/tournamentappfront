@@ -5,12 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.*
-import com.example.tournamentapp.ui.theme.HomeScreen
-import com.example.tournamentapp.ui.theme.LoginScreen
-import com.example.tournamentapp.ui.theme.RegisterScreen
-import com.example.tournamentapp.ui.theme.WelcomeScreen
-import com.example.tournamentapp.ui.theme.TournamentAppTheme
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.tournamentapp.ui.theme.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,7 +27,7 @@ fun AppNavigator() {
 
     NavHost(
         navController = navController,
-        startDestination = "welcome" // WelcomeScreen is the initial screen
+        startDestination = "welcome" // Initial screen is the welcome screen
     ) {
         // Welcome Screen
         composable("welcome") {
@@ -44,7 +42,7 @@ fun AppNavigator() {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate("register") },
                 onLoginSuccess = { token ->
-                    // Save the JWT token or pass it to HomeScreen
+                    // Navigate to home screen on login success
                     navController.navigate("home") {
                         popUpTo("welcome") { inclusive = true }
                     }
@@ -56,7 +54,7 @@ fun AppNavigator() {
         composable("register") {
             RegisterScreen(
                 onRegisterSuccess = {
-                    // Navigate to the LoginScreen after successful registration
+                    // Navigate to login screen after successful registration
                     navController.navigate("login") {
                         popUpTo("register") { inclusive = true }
                     }
@@ -67,8 +65,19 @@ fun AppNavigator() {
         // Home Screen
         composable("home") {
             HomeScreen(
-                onLoginClick = { navController.navigate("login") },
-                onSignupClick = { navController.navigate("register") }
+                onTournamentClick = { tournamentId ->
+                    // Navigate to tournament details screen
+                    navController.navigate("tournamentDetails/$tournamentId")
+                }
+            )
+        }
+
+        // Tournament Details Screen
+        composable("tournamentDetails/{tournamentId}") { backStackEntry ->
+            val tournamentId = backStackEntry.arguments?.getString("tournamentId")?.toInt() ?: 0
+            TournamentDetailsScreen(
+                tournamentId = tournamentId,
+                onBack = { navController.popBackStack() }
             )
         }
     }
